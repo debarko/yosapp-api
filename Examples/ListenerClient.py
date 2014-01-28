@@ -29,9 +29,12 @@ if sys.version_info >= (3, 0):
 
 from Yowsup.connectionmanager import YowsupConnectionManager
 
-class WhatsappListenerClient:
-	
+class WhatsappListenerClient:	
+
 	def __init__(self, keepAlive = False, sendReceipts = False):
+		self.messages = ''
+		self.hold_call = True
+		self.connect_Status = ''
 		self.sendReceipts = sendReceipts
 		
 		connectionManager = YowsupConnectionManager()
@@ -47,27 +50,41 @@ class WhatsappListenerClient:
 		
 		self.cm = connectionManager
 	
+	def disconnect(self, reason):
+		self.cm.readerThread.sendDisconnected(reason)
+		#print("Sent disconnnected")
+
+	def getMessages(self):
+		return self.messages
+
 	def login(self, username, password):
 		self.username = username
 		self.methodsInterface.call("auth_login", (username, password))
-		
-		
-		while True:
-			raw_input()	
+
+		while self.hold_call:
+			i=0
+
+		return self.connect_Status
 
 	def onAuthSuccess(self, username):
-		print("Authed %s" % username)
+		self.connect_Status = "SUCCESS"
+		self.hold_call = False
+		#print("Authed %s" % username)
 		self.methodsInterface.call("ready")
 
 	def onAuthFailed(self, username, err):
-		print("Auth Failed!")
+		self.connect_Status = "FAIL"
+		self.hold_call = False		
+		#print("Auth Failed!")
 
 	def onDisconnected(self, reason):
-		print("Disconnected because %s" %reason)
+		self.hold_call = False
+		#print("Disconnected because %s" %reason)
 
 	def onMessageReceived(self, messageId, jid, messageContent, timestamp, wantsReceipt, pushName, isBroadCast):
 		formattedDate = datetime.datetime.fromtimestamp(timestamp).strftime('%d-%m-%Y %H:%M')
-		print("%s [%s]:%s"%(jid, formattedDate, messageContent))
+		self.messages = self.messages + jid + "," + formattedDate + "," + messageContent + "<br />"
+		#print("%s [%s]:%s"%(jid, formattedDate, messageContent))
 
 		if wantsReceipt and self.sendReceipts:
 			self.methodsInterface.call("message_ack", (jid, messageId))
