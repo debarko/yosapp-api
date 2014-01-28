@@ -90,7 +90,7 @@ def application(environ, start_response):
     if method=="send":
     	wa = WhatsappEchoClient(to, message, False)
     	wa.login(cc+username, password)
-
+        output = "sent"
     if method=="register":
     	wc = WACodeRequestV2(cc, username, id_user, via)
     	result = wc.send()
@@ -111,6 +111,9 @@ def application(environ, start_response):
     	else:
     		output = "FAIL"
     	wa.disconnect("graceful")
+
+    if method=="status":
+        output = "fine"
 
     status = '200 OK'
     response_headers = [('Content-type', 'text/html'),('Content-Length', str(len(output)))]
