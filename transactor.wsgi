@@ -28,6 +28,8 @@ __license__ = "MIT"
 
 import argparse, sys, os, csv
 import random
+import urllib
+import unicodedata
 from Yowsup.Common.utilities import Utilities
 from Yowsup.Common.debugger import Debugger
 from Yowsup.Common.constants import Constants
@@ -65,6 +67,7 @@ def application(environ, start_response):
     code=''
     id_user=''
     output=''
+    contact=''
     for x in range(0, len(qry_string)):
     	param = qry_string[x]
     	param = param.split('=',1)
@@ -75,7 +78,9 @@ def application(environ, start_response):
     	if param[0]=="method":
     		method = param[1]
     	if param[0]=="message":
-    		message = param[1]
+            message = param[1]
+            message = urllib.unquote(message).decode('utf8')
+            message = unicodedata.normalize('NFKD', message).encode('ascii','ignore')
     	if param[0]=="to":
     		to = param[1]
     	if param[0]=="via":
@@ -86,6 +91,10 @@ def application(environ, start_response):
     		code=param[1]
     	if param[0]=="id_user":
     		id_user=param[1]
+        if param[0]=="contacts":
+            contact=param[1]
+        if param[0]=="debug":
+            Debugger.enabled = True
     password = base64.b64decode(bytes(password.encode('utf-8')))
     if method=="send":
     	wa = WhatsappEchoClient(to, message, False)
@@ -106,7 +115,7 @@ def application(environ, start_response):
     	wa = WhatsappListenerClient(False, True)
     	status = wa.login(cc+username, password)
     	if status=="SUCCESS":
-    		time.sleep(1)
+    		time.sleep(2)
     		output = wa.getMessages()
     	else:
     		output = "FAIL"
@@ -114,6 +123,12 @@ def application(environ, start_response):
 
     if method=="status":
         output = "fine"
+
+    if method=="sync":
+        output = "yay"
+        wsync = WAContactsSyncRequest(cc+username, password, contact)
+        result = wsync.send()
+        output = resultToString(result)
 
     status = '200 OK'
     response_headers = [('Content-type', 'text/html'),('Content-Length', str(len(output)))]

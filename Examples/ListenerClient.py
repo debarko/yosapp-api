@@ -68,9 +68,9 @@ class WhatsappListenerClient:
 
 	def onAuthSuccess(self, username):
 		self.connect_Status = "SUCCESS"
-		self.hold_call = False
-		#print("Authed %s" % username)
 		self.methodsInterface.call("ready")
+		self.hold_call = False
+		#print("Authed %s" % username)		
 
 	def onAuthFailed(self, username, err):
 		self.connect_Status = "FAIL"
@@ -78,12 +78,13 @@ class WhatsappListenerClient:
 		#print("Auth Failed!")
 
 	def onDisconnected(self, reason):
+		self.connect_Status = "FAIL"
 		self.hold_call = False
 		#print("Disconnected because %s" %reason)
 
 	def onMessageReceived(self, messageId, jid, messageContent, timestamp, wantsReceipt, pushName, isBroadCast):
 		formattedDate = datetime.datetime.fromtimestamp(timestamp).strftime('%d-%m-%Y %H:%M')
-		self.messages = self.messages + jid + "," + formattedDate + "," + messageContent + "<br />"
+		self.messages = self.messages + jid + "," + formattedDate + "," + messageContent + "\n"
 		#print("%s [%s]:%s"%(jid, formattedDate, messageContent))
 
 		if wantsReceipt and self.sendReceipts:
