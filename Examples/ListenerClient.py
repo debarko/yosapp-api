@@ -84,6 +84,7 @@ class WhatsappListenerClient:
 
 	def onMessageReceived(self, messageId, jid, messageContent, timestamp, wantsReceipt, pushName, isBroadCast):
 		formattedDate = datetime.datetime.fromtimestamp(timestamp).strftime('%d-%m-%Y %H:%M')
+		messageContent = messageContent.replace('\n', '%0A')
 		self.messages = self.messages + jid + "," + formattedDate + "," + messageContent + "\n"
 		#print("%s [%s]:%s"%(jid, formattedDate, messageContent))
 
