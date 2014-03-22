@@ -26,7 +26,7 @@ __version__ = "0.1"
 __email__ = "debarko89@gmail.com"
 __license__ = "MIT"
 
-import argparse, sys, os, csv
+import sys, os, csv
 import random
 import urllib
 import unicodedata
@@ -131,6 +131,6 @@ def application(environ, start_response):
         output = resultToString(result)
 
     status = '200 OK'
-    response_headers = [('Content-type', 'text/html'),('Content-Length', str(len(output)))]
+    response_headers = [('Content-type', 'text'),('Content-Length', str(len(output)))]
     start_response(status, response_headers)
     return [output]

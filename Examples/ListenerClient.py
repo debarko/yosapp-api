@@ -19,7 +19,7 @@ CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFT
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
-import os
+import os, time, urllib
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 import datetime, sys
@@ -38,7 +38,7 @@ class WhatsappListenerClient:
 		self.sendReceipts = sendReceipts
 		
 		connectionManager = YowsupConnectionManager()
-		connectionManager.setAutoPong(keepAlive)
+		connectionManager.setAutoPong(True)
 
 		self.signalsInterface = connectionManager.getSignalsInterface()
 		self.methodsInterface = connectionManager.getMethodsInterface()
@@ -47,8 +47,17 @@ class WhatsappListenerClient:
 		self.signalsInterface.registerListener("auth_success", self.onAuthSuccess)
 		self.signalsInterface.registerListener("auth_fail", self.onAuthFailed)
 		self.signalsInterface.registerListener("disconnected", self.onDisconnected)
+		self.signalsInterface.registerListener("presence_updated", self.onPresenceUpdated)
+		self.signalsInterface.registerListener("image_received", self.onImageReceived)
+		self.signalsInterface.registerListener("videoimage_received", self.onVideoReceived)
+		self.signalsInterface.registerListener("ping", self.onPing)
 		
 		self.cm = connectionManager
+
+		self.commandMappings = {"lastseen":lambda: self.methodsInterface.call("presence_request", ( self.jid,)),
+				"available": lambda: self.methodsInterface.call("presence_sendAvailable"),
+				"unavailable": lambda: self.methodsInterface.call("presence_sendUnavailable")
+				 }
 	
 	def disconnect(self, reason):
 		self.cm.readerThread.sendDisconnected(reason)
@@ -56,6 +65,10 @@ class WhatsappListenerClient:
 
 	def getMessages(self):
 		return self.messages
+
+	def onPing(self, pingId):
+		if self.connect_Status == "SUCCESS":
+			self.methodsInterface.call("pong", (pingId,))
 
 	def login(self, username, password):
 		self.username = username
@@ -66,11 +79,38 @@ class WhatsappListenerClient:
 
 		return self.connect_Status
 
+	def runCommand(self, command):
+		if command[0] == "/":
+			command = command[1:].split(' ')
+			try:
+				self.commandMappings[command[0]]()
+				return 1
+			except KeyError:
+				return 0
+		
+		return 0
+
+	def onImageReceived(self, messageId, jid, preview, url, size, receiptRequested, isBroadCast):
+		messageContent = unicode("[ image: "+url+" , preview: "+preview+"]", "utf-8")
+		messageContent = urllib.quote(messageContent)
+		self.onMessageReceived(messageId, jid, messageContent, long(time.time()), receiptRequested, None, False)
+
+	def onVideoReceived(self, messageId, jid, preview, url, size, receiptRequested, isBroadCast):
+		messageContent = unicode("[ image: "+url+" , preview: "+preview+"]", "utf-8")
+		messageContent = urllib.quote(messageContent)
+		self.onMessageReceived(messageId, jid, messageContent, long(time.time()), receiptRequested, None, False)
+
 	def onAuthSuccess(self, username):
 		self.connect_Status = "SUCCESS"
 		self.methodsInterface.call("ready")
 		self.hold_call = False
+		self.runCommand("/available");
+		#self.runCommand("/lastseen");
 		#print("Authed %s" % username)		
+
+	def onPresenceUpdated(self, jid, lastSeen):
+		formattedDate = datetime.datetime.fromtimestamp(long(time.time()) - lastSeen).strftime('%d-%m-%Y %H:%M')
+		self.onMessageReceived(0, jid, "Last Seen On: %s"%formattedDate, long(time.time()), False, None, False)
 
 	def onAuthFailed(self, username, err):
 		self.connect_Status = "FAIL"
@@ -86,7 +126,6 @@ class WhatsappListenerClient:
 		formattedDate = datetime.datetime.fromtimestamp(timestamp).strftime('%d-%m-%Y %H:%M')
 		messageContent = messageContent.replace('\n', '%0A')
 		self.messages = self.messages + jid + "," + formattedDate + "," + messageContent + "\n"
-		#print("%s [%s]:%s"%(jid, formattedDate, messageContent))
 
 		if wantsReceipt and self.sendReceipts:
 			self.methodsInterface.call("message_ack", (jid, messageId))

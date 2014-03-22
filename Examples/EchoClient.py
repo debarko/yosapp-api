@@ -52,6 +52,11 @@ class WhatsappEchoClient:
 		self.signalsInterface.registerListener("disconnected", self.onDisconnected)
 
 		self.done = False
+
+		self.commandMappings = {"lastseen":lambda: self.methodsInterface.call("presence_request", ( self.jid,)),
+						"available": lambda: self.methodsInterface.call("presence_sendAvailable"),
+						"unavailable": lambda: self.methodsInterface.call("presence_sendUnavailable")
+						 }
 	
 	def login(self, username, password):
 		self.username = username
@@ -60,30 +65,33 @@ class WhatsappEchoClient:
 		while not self.done:
 			time.sleep(0.5)
 
-	def onAuthSuccess(self, username):
-		print("Authed %s" % username)
+	def runCommand(self, command):
+		if command[0] == "/":
+			command = command[1:].split(' ')
+			try:
+				self.commandMappings[command[0]]()
+				return 1
+			except KeyError:
+				return 0
+		
+		return 0
 
+	def onAuthSuccess(self, username):
+		#print("Authed %s" % username)
+		self.runCommand("/available");
 		if self.waitForReceipt:
 			self.methodsInterface.call("ready")
-		
 		
 		if len(self.jids) > 1:
 			self.methodsInterface.call("message_broadcast", (self.jids, self.message))
 		else:
 			self.methodsInterface.call("message_send", (self.jids[0], self.message))
-		print("Sent message")
 		if self.waitForReceipt:
 			timeout = 5
 			t = 0;
 			while t < timeout and not self.gotReceipt:
 				time.sleep(0.5)
 				t+=1
-
-			if not self.gotReceipt:
-				print("print timedout!")
-			else:
-				print("Got sent receipt")
-
 		self.done = True
 
 	def onAuthFailed(self, username, err):
