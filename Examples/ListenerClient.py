@@ -49,7 +49,7 @@ class WhatsappListenerClient:
 		self.signalsInterface.registerListener("disconnected", self.onDisconnected)
 		self.signalsInterface.registerListener("presence_updated", self.onPresenceUpdated)
 		self.signalsInterface.registerListener("image_received", self.onImageReceived)
-		self.signalsInterface.registerListener("videoimage_received", self.onVideoReceived)
+		self.signalsInterface.registerListener("video_received", self.onVideoReceived)
 		self.signalsInterface.registerListener("ping", self.onPing)
 		
 		self.cm = connectionManager
@@ -96,7 +96,7 @@ class WhatsappListenerClient:
 		self.onMessageReceived(messageId, jid, messageContent, long(time.time()), receiptRequested, None, False)
 
 	def onVideoReceived(self, messageId, jid, preview, url, size, receiptRequested, isBroadCast):
-		messageContent = unicode("[ image: "+url+" , preview: "+preview+"]", "utf-8")
+		messageContent = unicode("[ video: "+url+" , preview: "+preview+"]", "utf-8")
 		messageContent = urllib.quote(messageContent)
 		self.onMessageReceived(messageId, jid, messageContent, long(time.time()), receiptRequested, None, False)
 
