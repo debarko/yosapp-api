@@ -1,0 +1,1 @@
+[ ![Codeship Status for folks/yowsapp](https://www.codeship.io/projects/37e67430-e480-0131-1d7a-3a784188f0ac/status)](https://www.codeship.io/projects/25612)
